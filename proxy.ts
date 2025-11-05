@@ -6,6 +6,8 @@ export function proxy(request: NextRequest) {
   
   const accessToken = request.cookies.get('accessToken')?.value;
   const userRole = request.cookies.get('userRole')?.value;
+
+  console.log({accessToken, pathname});
   
   const routeConfig: Record<string, { requiresAuth: boolean; allowedRoles: string[] }> = {
     '/posts': { requiresAuth: true, allowedRoles: ['user', 'admin', 'superadmin'] },
