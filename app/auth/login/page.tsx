@@ -89,7 +89,6 @@ const LoginPage: React.FC = () => {
         callbackUrl: '/posts',
         redirect: false,
       });
-      console.log("🚀 ~ handleGoogleSignIn ~1111111111 result:", result)
       
       if (result?.error) {
         toast.error('Google sign in failed');
