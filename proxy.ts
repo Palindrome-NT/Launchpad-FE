@@ -54,8 +54,8 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/auth/:path',
-    // '/posts',
-    // '/posts/:path*',
+    '/posts',
+    '/posts/:path*',
     '/chat/:path*',
     '/dashboard/:path*',
     '/lazy-loading/:path*',
