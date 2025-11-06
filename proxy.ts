@@ -5,6 +5,7 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   const accessToken = request.cookies.get('accessToken')?.value;
+  console.log("🚀 ~ proxy ~ accessToken:::::::::::::::::::::::::::::", accessToken)
   const userRole = request.cookies.get('userRole')?.value;
 
   console.log({accessToken, pathname});
@@ -53,8 +54,8 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/auth/:path',
-    '/posts',
-    '/posts/:path*',
+    // '/posts',
+    // '/posts/:path*',
     '/chat/:path*',
     '/dashboard/:path*',
     '/lazy-loading/:path*',
