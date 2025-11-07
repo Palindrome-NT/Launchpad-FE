@@ -27,12 +27,16 @@ export interface AuthResponse {
   data: {
     user: User;
   };
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 export interface RefreshTokenResponse {
   success: boolean;
   message: string;
   data: {};
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 export interface LoginRequest {

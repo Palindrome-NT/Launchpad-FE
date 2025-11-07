@@ -5,6 +5,7 @@ import { setUser, setError, clearAuth, setLoading, clearError } from '../slices/
 import { User, LoginRequest, RegisterRequest, VerifyOtpRequest, ResendOtpRequest } from '../../types/auth';
 import { refreshTokenService } from '../../services/refreshTokenService';
 import { setUserRoleCookie, clearUserRoleCookie } from '../../utils/cookies';
+import { tokenStorage } from '../../services/tokenStorage';
 
 // Helper functions for localStorage
 const saveUserToStorage = (user: User | null) => {
@@ -37,19 +38,27 @@ export const loginUser = createAsyncThunk<
     try {
       dispatch(setLoading(true));
       dispatch(clearError());
-      
+
       // @ts-ignore - RTK Query type issue, works at runtime
       const result = await dispatch(authApi.endpoints.login.initiate(credentials)).unwrap();
-      
+
       const user = result.data.user;
       dispatch(setUser(user));
       saveUserToStorage(user);
-      
+
+      // Store tokens from response
+      if (result.accessToken && result.refreshToken) {
+        tokenStorage.setTokens(result.accessToken, result.refreshToken);
+        console.log('✅ Tokens stored successfully after login');
+      } else {
+        console.warn('⚠️ No tokens in login response');
+      }
+
       // Set user role cookie for middleware
       setUserRoleCookie(user.role);
-      
+
       refreshTokenService.startTimer();
-      
+
       return user;
     } catch (error: any) {
       const errorMessage = error.data?.message || error.message || 'Login failed';
@@ -71,19 +80,28 @@ export const registerUser = createAsyncThunk<
     try {
       dispatch(setLoading(true));
       dispatch(clearError());
-      
+
       // @ts-ignore - RTK Query type issue, works at runtime
       const result = await dispatch(authApi.endpoints.register.initiate(userData)).unwrap();
-      
+
       const user = result.data.user;
       dispatch(setUser(user));
       saveUserToStorage(user);
-      
+
+      // Store tokens from response (if provided)
+      if (result.accessToken && result.refreshToken) {
+        tokenStorage.setTokens(result.accessToken, result.refreshToken);
+        console.log('✅ Tokens stored successfully after registration');
+      }
+
       // Set user role cookie for middleware
       setUserRoleCookie(user.role);
-      
-      refreshTokenService.startTimer();
-      
+
+      // Only start timer if tokens are available
+      if (result.accessToken && result.refreshToken) {
+        refreshTokenService.startTimer();
+      }
+
       return user;
     } catch (error: any) {
       const errorMessage = error.data?.message || error.message || 'Registration failed';
@@ -105,19 +123,27 @@ export const verifyOtpUser = createAsyncThunk<
     try {
       dispatch(setLoading(true));
       dispatch(clearError());
-      
+
       // @ts-ignore - RTK Query type issue, works at runtime
       const result = await dispatch(authApi.endpoints.verifyOtp.initiate(otpData)).unwrap();
-      
+
       const user = result.data.user;
       dispatch(setUser(user));
       saveUserToStorage(user);
-      
+
+      // Store tokens from response
+      if (result.accessToken && result.refreshToken) {
+        tokenStorage.setTokens(result.accessToken, result.refreshToken);
+        console.log('✅ Tokens stored successfully after OTP verification');
+      } else {
+        console.warn('⚠️ No tokens in OTP verification response');
+      }
+
       // Set user role cookie for middleware
       setUserRoleCookie(user.role);
-      
+
       refreshTokenService.startTimer();
-      
+
       return user;
     } catch (error: any) {
       const errorMessage = error.data?.message || error.message || 'OTP verification failed';
@@ -165,13 +191,18 @@ export const logoutUser = createAsyncThunk<
     } catch (error) {
       console.error('Backend logout failed:', error);
     } finally {
+      // Clear all auth-related data
       dispatch(clearAuth());
       saveUserToStorage(null);
       clearUserRoleCookie();
       refreshTokenService.stopTimer();
+      tokenStorage.clearTokens();
+
       if (typeof window !== 'undefined') {
         localStorage.removeItem('user');
       }
+
+      console.log('✅ Logged out successfully, all tokens cleared');
     }
   }
 );
@@ -185,20 +216,30 @@ export const checkAuthStatus = createAsyncThunk<
   async (_, { dispatch }) => {
     try {
       dispatch(setLoading(true));
-      
+
       const storedUser = getUserFromStorage();
-      
-      if (storedUser) {
+      const hasTokens = tokenStorage.hasTokens();
+
+      // Only restore auth if both user and tokens exist
+      if (storedUser && hasTokens) {
         dispatch(setUser(storedUser));
         setUserRoleCookie(storedUser.role);
         refreshTokenService.startTimer();
+        console.log('✅ Auth state restored from storage');
         return storedUser;
       }
-      
+
+      // If user exists but no tokens, clear everything
+      if (storedUser && !hasTokens) {
+        console.warn('⚠️ User found but tokens missing, clearing auth state');
+      }
+
       dispatch(clearAuth());
+      tokenStorage.clearTokens();
       return null;
     } catch (error) {
       dispatch(clearAuth());
+      tokenStorage.clearTokens();
       return null;
     } finally {
       dispatch(setLoading(false));

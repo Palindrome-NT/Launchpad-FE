@@ -2,6 +2,7 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { ENV } from '../../constants/env';
 import { refreshTokenService } from '../../services/refreshTokenService';
+import { tokenStorage } from '../../services/tokenStorage';
 
 type QueuedRequest = {
   args: any;
@@ -19,6 +20,13 @@ const baseQuery = fetchBaseQuery({
   credentials: 'include',
   prepareHeaders: (headers) => {
     headers.set('Content-Type', 'application/json');
+
+    // Attach access token to all requests if available
+    const accessToken = tokenStorage.getAccessToken();
+    if (accessToken) {
+      headers.set('Authorization', `Bearer ${accessToken}`);
+    }
+
     return headers;
   },
 });
