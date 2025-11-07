@@ -27,12 +27,16 @@ export interface AuthResponse {
   data: {
     user: User;
   };
+  accessToken?: string; // Token in response body (for cross-domain scenarios)
+  refreshToken?: string; // Token in response body (for cross-domain scenarios)
 }
 
 export interface RefreshTokenResponse {
   success: boolean;
   message: string;
   data: {};
+  accessToken?: string; // New access token from refresh
+  refreshToken?: string; // New refresh token (if rotated)
 }
 
 export interface LoginRequest {

@@ -5,6 +5,7 @@ import { setUser, setError, clearAuth, setLoading, clearError } from '../slices/
 import { User, LoginRequest, RegisterRequest, VerifyOtpRequest, ResendOtpRequest } from '../../types/auth';
 import { refreshTokenService } from '../../services/refreshTokenService';
 import { setUserRoleCookie, clearUserRoleCookie } from '../../utils/cookies';
+import { tokenManager } from '../../utils/tokenManager';
 
 // Helper functions for localStorage
 const saveUserToStorage = (user: User | null) => {
@@ -45,6 +46,12 @@ export const loginUser = createAsyncThunk<
       dispatch(setUser(user));
       saveUserToStorage(user);
       
+      // Store tokens from response body (for cross-domain scenarios)
+      if (result.accessToken && result.refreshToken) {
+        tokenManager.setTokens(result.accessToken, result.refreshToken);
+        console.log('✅ Tokens stored in localStorage');
+      }
+      
       // Set user role cookie for middleware
       setUserRoleCookie(user.role);
       
@@ -79,6 +86,12 @@ export const registerUser = createAsyncThunk<
       dispatch(setUser(user));
       saveUserToStorage(user);
       
+      // Store tokens from response body (for cross-domain scenarios)
+      if (result.accessToken && result.refreshToken) {
+        tokenManager.setTokens(result.accessToken, result.refreshToken);
+        console.log('✅ Tokens stored in localStorage');
+      }
+      
       // Set user role cookie for middleware
       setUserRoleCookie(user.role);
       
@@ -112,6 +125,12 @@ export const verifyOtpUser = createAsyncThunk<
       const user = result.data.user;
       dispatch(setUser(user));
       saveUserToStorage(user);
+      
+      // Store tokens from response body (for cross-domain scenarios)
+      if (result.accessToken && result.refreshToken) {
+        tokenManager.setTokens(result.accessToken, result.refreshToken);
+        console.log('✅ Tokens stored in localStorage');
+      }
       
       // Set user role cookie for middleware
       setUserRoleCookie(user.role);
@@ -168,6 +187,7 @@ export const logoutUser = createAsyncThunk<
       dispatch(clearAuth());
       saveUserToStorage(null);
       clearUserRoleCookie();
+      tokenManager.clearTokens(); // Clear tokens from localStorage
       refreshTokenService.stopTimer();
       if (typeof window !== 'undefined') {
         localStorage.removeItem('user');
@@ -187,18 +207,29 @@ export const checkAuthStatus = createAsyncThunk<
       dispatch(setLoading(true));
       
       const storedUser = getUserFromStorage();
+      const hasTokens = tokenManager.isAuthenticated();
       
-      if (storedUser) {
+      // User is authenticated if we have user data AND tokens
+      if (storedUser && hasTokens) {
         dispatch(setUser(storedUser));
         setUserRoleCookie(storedUser.role);
         refreshTokenService.startTimer();
         return storedUser;
       }
       
+      // If user exists but no tokens, or vice versa, clear everything
+      if (storedUser && !hasTokens) {
+        console.log('⚠️ User data exists but no tokens found, clearing auth');
+      } else if (!storedUser && hasTokens) {
+        console.log('⚠️ Tokens exist but no user data found, clearing auth');
+      }
+      
       dispatch(clearAuth());
+      tokenManager.clearTokens();
       return null;
     } catch (error) {
       dispatch(clearAuth());
+      tokenManager.clearTokens();
       return null;
     } finally {
       dispatch(setLoading(false));

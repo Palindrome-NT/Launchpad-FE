@@ -2,6 +2,7 @@ import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 import { ENV } from '../../constants/env';
 import { refreshTokenService } from '../../services/refreshTokenService';
+import { tokenManager } from '../../utils/tokenManager';
 
 type QueuedRequest = {
   args: any;
@@ -16,9 +17,17 @@ let isRefreshingToken = false;
 
 const baseQuery = fetchBaseQuery({
   baseUrl: ENV.API_BASE_URL,
-  credentials: 'include',
+  credentials: 'include', // Still include for testing if cookies work
   prepareHeaders: (headers) => {
     headers.set('Content-Type', 'application/json');
+    
+    // Add Authorization header from localStorage (fallback for cross-domain)
+    const accessToken = tokenManager.getAccessToken();
+    if (accessToken) {
+      headers.set('Authorization', `Bearer ${accessToken}`);
+      console.log('🔑 Added Bearer token to request headers');
+    }
+    
     return headers;
   },
 });
