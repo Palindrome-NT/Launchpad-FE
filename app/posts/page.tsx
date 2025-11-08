@@ -33,7 +33,7 @@ const PostsPage: React.FC = () => {
     try {
       const isOAuthUser = !!session;
       
-      await dispatch(logoutUser()).unwrap();
+      // await dispatch(logoutUser()).unwrap();
       
       if (isOAuthUser) {
         await signOut({ redirect: false });
